@@ -7,11 +7,12 @@ import (
 )
 
 type User struct {
-	Name   string `json:"name"`
-	UserID string `json:"user_id"`
-	Mobile string `json:"mobile"`
-	Mail   string `json:"mail"`
-	City   string `json:"city"`
+	Name     string `json:"name"`
+	UserID   string `json:"user_id"`
+	Mobile   string `json:"mobile"`
+	Mail     string `json:"mail"`
+	City     string `json:"city"`
+	Password string `json:"password" binding:"required"`
 }
 
 var Data map[string]User
@@ -27,7 +28,7 @@ func setupRoutes(r *gin.Engine) {
 	r.GET("/user", GetAllUser)
 	r.PUT("/user/:user_id", UpdateUser)
 	r.POST("/user", CreateUser)
-	r.DELETE("/user/:user", DeleteUser)
+	r.DELETE("/user/:user_id", DeleteUser)
 }
 func GetUserById(c *gin.Context) {
 	userID, ok := c.Params.Get("user_id")
@@ -82,6 +83,23 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, res)
 		return
 	}
+	password := c.GetHeader("password")
+	userObj := getUserByID(userID)
+	if userObj.UserID == "" {
+		res := gin.H{
+			"error": "UserID can't be empty"}
+		c.JSON(http.StatusBadRequest, res)
+		return
+
+	}
+	if password != Data[userID].Password {
+		res := gin.H{
+			"errror": "incorrect password",
+		}
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
 	Data[userID] = reqBody
 	res := gin.H{
 		"success": true,
@@ -116,7 +134,7 @@ func CreateUser(c *gin.Context) {
 	return
 }
 func DeleteUser(c *gin.Context) {
-	userID, ok := c.Params.Get("user")
+	userID, ok := c.Params.Get("user_id")
 	if ok == false {
 		res := gin.H{
 			"error": "user_id is missing",
@@ -124,12 +142,19 @@ func DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
-	reqBody := User{}
-	Data[userID] = reqBody
-	res := gin.H{
-		"success": true,
-		"user":    reqBody,
+
+	if _, ok := Data[userID]; ok {
+		delete(Data, userID)
+
+		res := gin.H{
+			"success": true,
+		}
+		c.JSON(http.StatusOK, res)
+		return
 	}
-	c.JSON(http.StatusOK, res)
-	return
+
+	res := gin.H{
+		"error": "user_id doesnot exist",
+	}
+	c.JSON(http.StatusBadRequest, res)
 }
