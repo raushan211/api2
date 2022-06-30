@@ -1,12 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type User struct {
+	ID       int    `json:"id"`
 	Name     string `json:"name"`
 	UserID   string `json:"user_id"`
 	Mobile   string `json:"mobile"`
@@ -15,9 +17,13 @@ type User struct {
 	Password string `json:"password" binding:"required"`
 }
 
-var Data map[string]User
+var (
+	Data map[string]User
+	DB   *sql.DB
+)
 
 func main() {
+
 	Data = make(map[string]User)
 	r := gin.Default()
 	setupRoutes(r)
@@ -39,7 +45,7 @@ func GetUserById(c *gin.Context) {
 		c.JSON(http.StatusOK, res)
 		return
 	}
-	user := getUserByID(userID)
+	user, _ := getUserByIDFromDB(userID)
 	res := gin.H{
 		"user": user,
 	}
@@ -125,6 +131,15 @@ func CreateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, res)
 		return
 	}
+
+	if len(reqBody.Mobile) != 10 {
+		res := gin.H{
+			"error": "phone number must be 10 digit",
+		}
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
 	Data[reqBody.UserID] = reqBody
 	res := gin.H{
 		"success": true,
