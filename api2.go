@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 )
 
 type User struct {
@@ -23,7 +24,8 @@ var (
 )
 
 func main() {
-
+	createDBConnection()
+	defer DB.Close()
 	Data = make(map[string]User)
 	r := gin.Default()
 	setupRoutes(r)
@@ -52,8 +54,16 @@ func GetUserById(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 func GetAllUser(c *gin.Context) {
+	users, err := getAllUserFromDB()
+	if err != nil {
+		res := gin.H{
+			"error": err,
+		}
+		c.JSON(http.StatusInternalServerError, res)
+		return
+	}
 	res := gin.H{
-		"user": Data,
+		"users": users,
 	}
 	c.JSON(http.StatusOK, res)
 }
