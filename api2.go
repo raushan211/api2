@@ -80,7 +80,7 @@ func UpdateUser(c *gin.Context) {
 	err := c.Bind(&reqBody)
 	if err != nil {
 		res := gin.H{
-			"error": err,
+			"error": err.Error(),
 		}
 		c.JSON(http.StatusBadRequest, res)
 		return
@@ -100,7 +100,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 	password := c.GetHeader("password")
-	userObj := getUserByID(userID)
+	userObj, _ := getUserByIDFromDB(userID)
 	if userObj.UserID == "" {
 		res := gin.H{
 			"error": "UserID can't be empty"}
@@ -108,7 +108,8 @@ func UpdateUser(c *gin.Context) {
 		return
 
 	}
-	if password != Data[userID].Password {
+	user, _ := getUserByIDFromDB(userID)
+	if password != user.Password {
 		res := gin.H{
 			"errror": "incorrect password",
 		}
@@ -116,13 +117,13 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	Data[userID] = reqBody
+	result := updateUserFromDB(reqBody, userID)
 	res := gin.H{
-		"success": true,
-		"user_id": reqBody,
+		"success": result,
+		"user":    reqBody,
 	}
 	c.JSON(http.StatusOK, res)
-	return
+
 }
 func CreateUser(c *gin.Context) {
 	reqBody := User{}
@@ -150,13 +151,14 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	Data[reqBody.UserID] = reqBody
+	result := createUserToDB(reqBody)
+
 	res := gin.H{
 		"success": true,
-		"user":    reqBody,
+		"result":  result,
 	}
 	c.JSON(http.StatusOK, res)
-	return
+
 }
 func DeleteUser(c *gin.Context) {
 	userID, ok := c.Params.Get("user_id")
@@ -168,18 +170,20 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if _, ok := Data[userID]; ok {
-		delete(Data, userID)
+	// if _, ok := Data[userID]; ok {
+	// 	delete(Data, userID)
 
-		res := gin.H{
-			"success": true,
-		}
-		c.JSON(http.StatusOK, res)
-		return
-	}
+	// 	res := gin.H{
+	// 		"success": true,
+	// 	}
+	// 	c.JSON(http.StatusOK, res)
+	// 	return
+	//	}
+	result := deleteUserFromDB(userID)
 
 	res := gin.H{
-		"error": "user_id doesnot exist",
+		"result": result,
 	}
 	c.JSON(http.StatusBadRequest, res)
+
 }
